@@ -32,6 +32,9 @@ module Danger
     # Maximum number of issues to be reported.
     attr_accessor :max_num_violations
 
+    # Hide report result
+    attr_accessor :hide_results
+
     # Provides additional logging diagnostic information.
     attr_accessor :verbose
 
@@ -142,21 +145,28 @@ module Danger
         send_inline_comment(warnings, strict ? :fail : :warn)
         send_inline_comment(errors, (fail_on_error || strict) ? :fail : :warn)
         warn other_issues_message(other_issues_count) if other_issues_count > 0
-      elsif warnings.count > 0 || errors.count > 0
-        # Report if any warning or error
-        message = "### SwiftLint found issues\n\n".dup
-        message << markdown_issues(warnings, 'Warnings') unless warnings.empty?
-        message << markdown_issues(errors, 'Errors') unless errors.empty?
-        message << "\n#{other_issues_message(other_issues_count)}" if other_issues_count > 0
-        markdown message
+      end
 
-        # Fail danger on errors
-        should_fail_by_errors = fail_on_error && errors.count > 0
-        # Fail danger if any warnings or errors and we are strict
-        should_fail_by_strict = strict && (errors.count > 0 || warnings.count > 0)
-        if should_fail_by_errors || should_fail_by_strict
-          fail 'Failed due to SwiftLint errors'
+      if !hide_results
+        if warnings.count > 0 || errors.count > 0
+          # Report if any warning or error
+          message = "### SwiftLint found issues\n\n".dup
+          message << markdown_issues(warnings, 'Warnings') unless warnings.empty?
+          message << markdown_issues(errors, 'Errors') unless errors.empty?
+          message << "\n#{other_issues_message(other_issues_count)}" if other_issues_count > 0
+          markdown message
+        else
+          message = "#### :+1: There are no linter violations.".dup
+          markdown message
         end
+      end
+
+      # Fail danger on errors
+      should_fail_by_errors = fail_on_error && errors.count > 0
+      # Fail danger if any warnings or errors and we are strict
+      should_fail_by_strict = strict && (errors.count > 0 || warnings.count > 0)
+      if should_fail_by_errors || should_fail_by_strict
+        fail 'Failed due to SwiftLint errors'
       end
     end
 
